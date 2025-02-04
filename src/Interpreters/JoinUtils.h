@@ -4,6 +4,7 @@
 #include <Core/Block.h>
 #include <Interpreters/IJoin.h>
 #include <Core/Joins.h>
+#include <Interpreters/JoinInfo.h>
 #include <Interpreters/ActionsDAG.h>
 
 namespace DB
