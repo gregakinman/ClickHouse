@@ -41,6 +41,9 @@ elseif (ARCH_RISCV64)
     set (LLVM_TARGETS_TO_BUILD "RISCV" CACHE INTERNAL "")
 endif ()
 
+if (USE_MUSL)
+    set (CMAKE_DL_LIBS "")
+endif()
 
 if (NOT ENABLE_EMBEDDED_COMPILER AND NOT ENABLE_DWARF_PARSER)
     # Only compiling blake3
