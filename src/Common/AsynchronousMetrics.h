@@ -227,6 +227,10 @@ private:
         NetworkInterfaceStatValues operator-(const NetworkInterfaceStatValues & other) const;
     };
 
+    // warning limit
+    size_t max_pending_mutations_to_warn = 100lu;
+    size_t max_stuck_mutations_to_warn = 100lu;
+
     std::unordered_map<String /* device name */, NetworkInterfaceStatValues> network_interface_stats TSA_GUARDED_BY(data_mutex);
 
     Stopwatch block_devices_rescan_delay TSA_GUARDED_BY(data_mutex);

@@ -1817,6 +1817,25 @@ void AsynchronousMetrics::update(TimePoint update_time, bool force_update)
         std::lock_guard values_lock(values_mutex);
         values.swap(new_values);
 
+
+        // system.warnings
+        if (new_values["NumberOfPendingMutations"].value >= max_pending_mutations_to_warn)
+        {
+            global_context->addOrUpdateWarningMessage("NumberOfPendingMutations", fmt::format("The number of pending mutations is more than {}", max_pending_mutations_to_warn));
+        }
+        else
+        {
+            global_context->removeWarningMessage("NumberOfPendingMutations");
+        }
+        if (new_values["NumberOfStuckMutations"].value >= max_stuck_mutations_to_warn)
+        {
+            global_context->addOrUpdateWarningMessage("NumberOfStuckMutations", fmt::format("The number of stuck mutations is more than {}", max_pending_mutations_to_warn));
+
+        }
+        else
+        {
+            global_context->removeWarningMessage("NumberOfStuckMutations");
+        }
     }
 }
 
