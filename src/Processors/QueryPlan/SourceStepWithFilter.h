@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Core/Names.h>
 #include <Interpreters/ActionsDAG.h>
 #include <Processors/QueryPlan/ISourceStep.h>
 #include <Storages/SelectQueryInfo.h>
@@ -7,6 +8,20 @@
 
 namespace DB
 {
+
+/// Information about a `LIMIT N BY <cols>` clause that the planner has determined
+/// can be pushed down to a source step, because the input to the LIMIT BY is
+/// already sorted by `<cols>` as a prefix of its sort description. The source
+/// step (e.g. ReadFromMergeTree) may use this to do per-group early stop or
+/// granule pruning. A source step that doesn't know how to use this info should
+/// simply ignore it; correctness is preserved by the existing LimitByTransform
+/// at the top of the pipeline.
+struct LimitByPushdownInfo
+{
+    Names columns;
+    size_t length = 0;
+    size_t offset = 0;
+};
 
 class SourceStepWithFilterBase : public ISourceStep
 {
@@ -24,6 +39,7 @@ public:
         , filter_nodes()
         , filter_dags()
         , limit(other.limit)
+        , limit_by_pushdown(other.limit_by_pushdown)
         , filter_actions_dag()
     {
         filter_dags.reserve(other.filter_dags.size());
@@ -54,6 +70,17 @@ public:
         limit = limit_value;
     }
 
+    /// Push down a LIMIT N BY <cols> clause that the planner has determined sits
+    /// over an in-order read whose sort-description prefix matches <cols>. See
+    /// LimitByPushdownInfo. The default behavior in source steps is to ignore
+    /// this; correctness is preserved by the unaltered LimitByTransform above.
+    void setLimitByPushdown(LimitByPushdownInfo info)
+    {
+        limit_by_pushdown = std::move(info);
+    }
+
+    const std::optional<LimitByPushdownInfo> & getLimitByPushdown() const { return limit_by_pushdown; }
+
     /// Apply filters that can optimize reading from storage.
     void applyFilters()
     {
@@ -82,6 +109,7 @@ private:
 
 protected:
     std::optional<size_t> limit;
+    std::optional<LimitByPushdownInfo> limit_by_pushdown;
     std::shared_ptr<const ActionsDAG> filter_actions_dag;
 };
 

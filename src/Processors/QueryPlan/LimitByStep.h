@@ -25,6 +25,12 @@ public:
     static QueryPlanStepPtr deserialize(Deserialization & ctx);
 
     void applyOrder(SortDescription sort_desc);
+
+    size_t getGroupLength() const { return group_length; }
+    size_t getGroupOffset() const { return group_offset; }
+    const Names & getColumns() const { return columns; }
+    bool isInOrder() const { return in_order; }
+
 private:
     void updateOutputHeader() override
     {

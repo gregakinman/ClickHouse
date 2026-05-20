@@ -1,6 +1,7 @@
 #include <Processors/QueryPlan/Optimizations/Optimizations.h>
 #include <Processors/QueryPlan/ExpressionStep.h>
 #include <Processors/QueryPlan/FilterStep.h>
+#include <Processors/QueryPlan/LimitByStep.h>
 #include <Processors/QueryPlan/LimitStep.h>
 #include <Processors/QueryPlan/SourceStepWithFilter.h>
 #include <Processors/QueryPlan/ObjectFilterStep.h>
@@ -52,6 +53,24 @@ void optimizePrimaryKeyConditionAndLimit(const Stack & stack)
         else if (auto * limit_step = typeid_cast<LimitStep *>(iter->node->step.get()))
         {
             source_step_with_filter->setLimit(limit_step->getLimitForSorting());
+            break;
+        }
+        else if (auto * limit_by_step = typeid_cast<LimitByStep *>(iter->node->step.get()))
+        {
+            /// A LimitByStep whose BY-columns form a prefix of the source's sort
+            /// description (i.e. applyOrder() has marked it in_order) can in
+            /// principle be applied per-group at the storage layer. Push the
+            /// info to the source step; it's up to the source step whether to
+            /// use it. Correctness is preserved by the unaltered LimitByTransform
+            /// at the top of the pipeline regardless.
+            if (limit_by_step->isInOrder())
+            {
+                source_step_with_filter->setLimitByPushdown(LimitByPushdownInfo{
+                    .columns = limit_by_step->getColumns(),
+                    .length = limit_by_step->getGroupLength(),
+                    .offset = limit_by_step->getGroupOffset(),
+                });
+            }
             break;
         }
         else if (auto * expression_step = typeid_cast<ExpressionStep *>(iter->node->step.get()))
